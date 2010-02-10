@@ -29,7 +29,10 @@ ch.exchangeDeclare("in", "fanout");
 ch.queueBind("out", "js", "");
 ch.queueBind("js", "in", "");
 
+// Now we have:
 // (X)in -> [|||]foobar -> JS -> (X)foobar -> [|||]out
+// In general, in and out would be pre-existing exchanges
+// that you want to hook up with, or other pipelines.
 
 var body = new Packages.java.lang.String("ooop").getBytes();
 ch.basicPublish("in", "", MessageProperties.BASIC, body);
