@@ -33,24 +33,28 @@ public abstract class PipelineBase implements Pipeline {
     void commit();
     void rollback();
   }
+
+  // There's a mutex on operations involving publishes and acks.
+  // That's because we may, for example, commit from a different
+  // thread from that on which we are responding to incoming data and
+  // publishing.  It's no good using synchronizedLists, either,
+  // because both acks and publishes race with commits.  (I think
+  // nested synchronized blocks is asking for deadlocks.  I may yet
+  // eat my words.)
+  private final Object mutex = new Object();
   
   List<Publication> _publishes = new ArrayList<Publication>();
   List<Datum> _acks = new ArrayList<Datum>();
   /* final */
   Outside _outside;
 
-  void reset() {
-    _publishes.clear();
-    _acks.clear();
-  }
-
   // Force subclasses to either accept an outside, or supply one.
   public PipelineBase(Outside outside) {
     _outside = outside;
   }
   
-  // These should be considered protected final
-  
+  // These should be considered protected final They're not serialised
+  // on the understanding that that done in the public/subclass interface.
   void doAllPublishes() {
     for (Publication p: _publishes) {
       _outside.publish(p._body, p._key, p._headers);
@@ -61,6 +65,11 @@ public abstract class PipelineBase implements Pipeline {
     for (Datum d: _acks) {
       d.ack();
     }
+  }
+
+  void reset() {
+    _publishes.clear();
+    _acks.clear();
   }
 
   // These will probably be overridden -- protected
@@ -77,26 +86,38 @@ public abstract class PipelineBase implements Pipeline {
     input(in);
   }
 
-  /* API for subclasses, public to make it easier to test from outside */
+  /* API mainly for subclasses to expose to other things (e.g.,
+   * scripts) */
   
   public void commit() {
-    doAllAcks();
-    doAllPublishes();
-    doCommit();
-    reset();
+    synchronized(mutex) {
+      doAllAcks();
+      doAllPublishes();
+      doCommit();
+      reset();
+    }
   }
 
   public void rollback() {
-    doRollback();
-    reset();
+    synchronized(mutex) {
+      doRollback();
+      reset();
+    }
   }
 
+  // We don't technically need to serialize acks /with/ publishes,
+  // but we do need to have one mutex for operations above, so it's
+  // simpler.
   public void ack(Datum d) {
-    _acks.add(d);
+    synchronized(mutex) {
+      _acks.add(d);
+    }
   }
   
   public void publish(byte[] body, String key, Map<String, Object> headers) {
-    _publishes.add(new Publication(body, key, headers));
+    synchronized(mutex) {
+      _publishes.add(new Publication(body, key, headers));
+    }
   }
   public final void publish(Datum in, String key) {
     publish(in.body(), key, in.headers());
