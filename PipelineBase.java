@@ -26,7 +26,7 @@ class Publication {
 
 public abstract class PipelineBase implements Pipeline {
 
-  interface Outside {
+  public interface Outside {
     void publish(byte[] body, String key, /* option */ Map<String, Object> headers);
     void saveState(byte[] state);
     /* option */ byte[] retrieveState();
