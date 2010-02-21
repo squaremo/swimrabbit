@@ -1,2 +1,4 @@
 *~
 *.class
+ebin/*.beam
+dist/*
