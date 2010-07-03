@@ -1,0 +1,13 @@
+Swim Rabbit swim!
+
+In /: A RabbitMQ plugin that (eventually) will let you upload programs to
+run messages through, with an HTTP interface.
+
+Running this: It builds as a RabbitMQ plugin, i.e., when a
+subdirectory of rabbitmq-public-umbrella.  It needs a more recent
+mochiweb than the one pinned in rabbit_mochiweb. Either use (i.e.,
+symlink into plugins/) the one that gets built in
+deps/webmachine/webmachine/deps/mochiweb or just a recent clone.
+
+In java/: Some experiments with a transactional JavaScript
+interpreter.
